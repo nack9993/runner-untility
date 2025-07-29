@@ -26,6 +26,12 @@ function switchPage(pageId) {
     document.getElementById('gpxViewerNav').classList.add('active');
   } else if (pageId === 'lucky-draw') {
     document.getElementById('luckyDrawNav').classList.add('active');
+  } else if (pageId === 'email-preview') {
+    document.getElementById('emailPreviewNav').classList.add('active');
+    // Initialize email preview when page is shown
+    if (window.initializeEmailPreview) {
+      window.initializeEmailPreview();
+    }
   }
 }
 

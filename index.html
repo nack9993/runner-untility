@@ -10,10 +10,11 @@
     <!-- Top Navigation -->
     <nav class="top-nav">
       <div class="nav-container">
-        <div class="nav-brand">GPX Viewer & Lucky Draw</div>
+        <div class="nav-brand">Runner Unity</div>
         <div class="nav-links">
           <button class="nav-btn active" id="gpxViewerNav" onclick="switchPage('gpx-viewer')">GPX Viewer</button>
           <button class="nav-btn" id="luckyDrawNav" onclick="switchPage('lucky-draw')">Lucky Draw</button>
+          <button class="nav-btn" id="emailPreviewNav" onclick="switchPage('email-preview')">Email Preview</button>
         </div>
       </div>
     </nav>
@@ -190,11 +191,77 @@
       </div>
     </div>
 
+    <!-- Email Preview Page -->
+    <div id="email-preview" class="page">
+      <div class="email-preview-container">
+        <div class="email-preview-sidebar">
+          <header>
+            <h1>📧 Email Preview</h1>
+          </header>
+
+          <!-- Email Template Controls Section -->
+          <section class="section">
+            <h2 class="section-title">Template Variables</h2>
+            <div class="email-controls">
+              <div class="input-group">
+                <label for="recipientName">Recipient Name:</label>
+                <input type="text" id="recipientName" placeholder="Enter recipient name..." value="John Runner" />
+              </div>
+              <div class="input-group">
+                <label for="registrationNumber">Registration Number:</label>
+                <input type="text" id="registrationNumber" placeholder="Enter registration number..." value="JJ2025-001" />
+              </div>
+              <button id="updateEmailBtn" class="control-btn update-btn">Update Preview</button>
+            </div>
+          </section>
+
+          <!-- Email Actions Section -->
+          <section class="section">
+            <h2 class="section-title">Actions</h2>
+            <div class="email-actions">
+              <button id="copyEmailBtn" class="control-btn copy-btn">📋 Copy HTML</button>
+              <button id="downloadEmailBtn" class="control-btn download-btn">💾 Download HTML</button>
+              <button id="resetTemplateBtn" class="control-btn">🔄 Reset Template</button>
+            </div>
+          </section>
+
+          <!-- Template Info Section -->
+          <section class="section">
+            <h2 class="section-title">Template Info</h2>
+            <div class="template-info">
+              <div class="info-item">
+                <strong>Event:</strong> Jog and Jive
+              </div>
+              <div class="info-item">
+                <strong>Date:</strong> August 16, 2025
+              </div>
+              <div class="info-item">
+                <strong>Time:</strong> 06:00-10:00 AM
+              </div>
+              <div class="info-item">
+                <strong>Participants:</strong> 100 runners
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="email-preview-display">
+          <div class="email-preview-wrapper">
+            <h3 class="preview-title">Live Email Preview</h3>
+            <div id="emailPreviewContent" class="email-content">
+              <!-- Email content will be injected here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- JavaScript Files -->
     <script src="js/app.js"></script>
     <script src="js/gpx-utils.js"></script>
     <script src="js/gpx-viewer.js"></script>
     <script src="js/cross-street.js"></script>
     <script src="js/lucky-draw.js"></script>
+    <script src="js/email-preview.js"></script>
   </body>
 </html>
