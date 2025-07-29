@@ -35,24 +35,6 @@
             </div>
           </section>
 
-          <!-- Avatar Upload Section -->
-          <section class="section">
-            <h2 class="section-title">Avatar Images</h2>
-            <div class="avatar-upload">
-              <input type="file" id="avatarFiles" accept="image/*" multiple />
-              <label for="avatarFiles" class="upload-btn avatar-btn">Upload Avatars</label>
-              <div class="avatar-info">
-                <small>Upload images to use as moving pins (PNG, JPG, GIF)</small>
-              </div>
-              <div id="avatarGallery" class="avatar-gallery">
-                <!-- Uploaded avatars will be displayed here -->
-              </div>
-              <div id="convoyInfo" class="convoy-info" style="display: none">
-                <small>All uploaded avatars will move together as rounded pins with the main pin</small>
-              </div>
-            </div>
-          </section>
-
           <!-- Playback Controls Section -->
           <section class="section" id="playbackSection" style="display: none">
             <h2 class="section-title">Playback</h2>
@@ -473,10 +455,6 @@
       let drawingPoints = []; // Array to store points while drawing
       let tempMarkers = []; // Temporary markers while drawing
 
-      // Avatar variables
-      let avatarImages = []; // Array to store uploaded avatar images
-      let avatarSize = 40; // Size of avatar images in pixels
-
       // Convoy variables for multiple moving pins
       let convoyMarkers = []; // Array to store all moving markers (default pin + avatars)
 
@@ -621,11 +599,6 @@
         document
           .getElementById("cancelDrawBtn")
           .addEventListener("click", cancelDrawing);
-
-        // Set up avatar controls
-        document
-          .getElementById("avatarFiles")
-          .addEventListener("change", handleAvatarUpload);
 
         // Set up map click listener for drawing lines
         map.addListener("click", handleMapClick);
@@ -781,9 +754,6 @@
 
         // Clear cross street lines
         clearAllCrossStreetLines();
-
-        // Clear avatars when loading new track
-        clearAllAvatars();
       }
 
       function showTrackInfo() {
@@ -902,8 +872,8 @@
           currentMarker = null;
         }
 
-        // Initialize convoy if not already created or if avatar count changed
-        if (convoyMarkers.length !== (1 + avatarImages.length)) {
+        // Initialize convoy if not already created
+        if (convoyMarkers.length === 0) {
           initializeConvoy();
         }
 
@@ -919,7 +889,7 @@
         convoyMarkers.forEach((marker) => marker.setMap(null));
         convoyMarkers = [];
 
-        // Create main default pin (always first in convoy)
+        // Create main default pin
         const mainMarker = new google.maps.Marker({
           position: { lat: 0, lng: 0 }, // Will be updated by updateConvoyPositions
           map: map,
@@ -935,61 +905,16 @@
           zIndex: 1000,
         });
         convoyMarkers.push(mainMarker);
-
-        // Create avatar markers following in formation
-        avatarImages.forEach((avatar, index) => {
-          const avatarMarker = new google.maps.Marker({
-            position: { lat: 0, lng: 0 }, // Will be updated by updateConvoyPositions
-            map: map,
-            icon: {
-              url: avatar.circularUrl, // Use circular version for map pins
-              scaledSize: new google.maps.Size(avatarSize, avatarSize),
-              anchor: new google.maps.Point(avatarSize / 2, avatarSize / 2),
-            },
-            title: avatar.name,
-            zIndex: 999 - index,
-          });
-          convoyMarkers.push(avatarMarker);
-        });
       }
 
       function updateConvoyPositions(point) {
         if (convoyMarkers.length === 0) return;
-
-        // Calculate formation parameters
-        const baseOffsetDistance = 0.0008;
-        const offsetDistance = baseOffsetDistance + (avatarImages.length * 0.0002);
 
         // Update main pin position
         if (convoyMarkers[0]) {
           convoyMarkers[0].setPosition({ lat: point.lat, lng: point.lon });
           convoyMarkers[0].setTitle("Main Position - Point " + (currentPointIndex + 1));
         }
-
-        // Update avatar positions
-        avatarImages.forEach((avatar, index) => {
-          if (convoyMarkers[index + 1]) {
-            // Calculate ring and position within ring for better spacing
-            const avatarsPerRing = 6;
-            const ring = Math.floor(index / avatarsPerRing);
-            const positionInRing = index % avatarsPerRing;
-            const avatarsInCurrentRing = Math.min(avatarsPerRing, avatarImages.length - ring * avatarsPerRing);
-            
-            // Calculate angle for this position in the ring
-            const angle = (positionInRing * (360 / avatarsInCurrentRing)) * (Math.PI / 180);
-            
-            // Calculate distance based on ring
-            const ringDistance = offsetDistance * (1 + ring * 0.8);
-            
-            // Calculate final position
-            const offsetLat = point.lat + (ringDistance * Math.cos(angle));
-            const offsetLng = point.lon + (ringDistance * Math.sin(angle));
-
-            // Smoothly update position
-            convoyMarkers[index + 1].setPosition({ lat: offsetLat, lng: offsetLng });
-            convoyMarkers[index + 1].setTitle(`${avatar.name} - Point ${currentPointIndex + 1}`);
-          }
-        });
       }
 
       function clearStaticTrack() {
@@ -1307,139 +1232,7 @@
         updateCrossStreetList();
       }
 
-      // Avatar Functions
-      function handleAvatarUpload(event) {
-        const files = event.target.files;
-        if (files.length === 0) return;
 
-        Array.from(files).forEach(file => {
-          if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-              // Create a circular version of the image for the map pin
-              createCircularImage(e.target.result, (circularUrl) => {
-                const avatarData = {
-                  id: Date.now() + Math.random(), // Unique ID
-                  name: file.name,
-                  url: e.target.result, // Original for gallery
-                  circularUrl: circularUrl, // Circular for map pins
-                  file: file
-                };
-                
-                avatarImages.push(avatarData);
-                updateAvatarGallery();
-                
-                // Show convoy info if we have avatars
-                if (avatarImages.length > 0) {
-                  document.getElementById("convoyInfo").style.display = "block";
-                }
-                
-                // If animation is playing, reinitialize convoy with new avatar
-                if (isPlaying) {
-                  initializeConvoy();
-                }
-              });
-            };
-            reader.readAsDataURL(file);
-          }
-        });
-      }
-
-      function updateAvatarGallery() {
-        const gallery = document.getElementById("avatarGallery");
-        gallery.innerHTML = "";
-
-        if (avatarImages.length === 0) {
-          gallery.innerHTML = "<p style='color: #666; font-size: 12px; margin: 8px 0;'>No avatars uploaded</p>";
-          return;
-        }
-
-        avatarImages.forEach((avatar, index) => {
-          const avatarItem = document.createElement("div");
-          avatarItem.className = "avatar-item";
-          avatarItem.innerHTML = `
-            <div class="avatar-preview">
-              <img src="${avatar.url}" alt="${avatar.name}" />
-            </div>
-            <div class="avatar-name">${avatar.name}</div>
-            <button class="delete-avatar-btn" onclick="deleteAvatar(${index})">✕</button>
-          `;
-          gallery.appendChild(avatarItem);
-        });
-      }
-
-
-
-      function deleteAvatar(index) {
-        if (index < 0 || index >= avatarImages.length) return;
-        
-        avatarImages.splice(index, 1);
-        updateAvatarGallery();
-        
-        // Hide convoy info if no avatars left
-        if (avatarImages.length === 0) {
-          document.getElementById("convoyInfo").style.display = "none";
-        }
-        
-        // If animation is playing, reinitialize convoy with new avatar count
-        if (isPlaying) {
-          initializeConvoy();
-        }
-      }
-
-      function clearAllAvatars() {
-        avatarImages = [];
-        updateAvatarGallery();
-        document.getElementById("convoyInfo").style.display = "none";
-        
-        // Clear any existing convoy markers
-        convoyMarkers.forEach((marker) => marker.setMap(null));
-        convoyMarkers = [];
-      }
-
-      // Function to create circular version of image for map pins
-      function createCircularImage(imageUrl, callback) {
-        const img = new Image();
-        img.onload = function() {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          // Set canvas size to avatar size
-          const size = avatarSize;
-          canvas.width = size;
-          canvas.height = size;
-          
-          // Create circular clipping path for image
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(size / 2, size / 2, (size / 2) - 2, 0, 2 * Math.PI);
-          ctx.clip();
-          
-          // Draw image to fit the circle
-          ctx.drawImage(img, 0, 0, size, size);
-          ctx.restore();
-          
-          // Add circular border
-          ctx.beginPath();
-          ctx.arc(size / 2, size / 2, (size / 2) - 1, 0, 2 * Math.PI);
-          ctx.strokeStyle = '#FFFFFF';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          
-          // Add outer shadow/border
-          ctx.beginPath();
-          ctx.arc(size / 2, size / 2, (size / 2) - 0.5, 0, 2 * Math.PI);
-          ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 1;
-          ctx.globalAlpha = 0.3;
-          ctx.stroke();
-          
-          // Convert to data URL and return
-          const circularUrl = canvas.toDataURL('image/png');
-          callback(circularUrl);
-        };
-        img.src = imageUrl;
-      }
     </script>
   </body>
 </html>
