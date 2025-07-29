@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GPX Track Viewer & Lucky Draw</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+      <div class="nav-container">
+        <div class="nav-brand">GPX Viewer & Lucky Draw</div>
+        <div class="nav-links">
+          <button class="nav-btn active" id="gpxViewerNav" onclick="switchPage('gpx-viewer')">GPX Viewer</button>
+          <button class="nav-btn" id="luckyDrawNav" onclick="switchPage('lucky-draw')">Lucky Draw</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- GPX Viewer Page -->
+    <div id="gpx-viewer" class="page active">
+      <div class="container">
+        <div class="sidebar">
+          <header>
+            <h1>GPX Track Viewer</h1>
+          </header>
+
+          <!-- File Upload Section -->
+          <section class="section">
+            <h2 class="section-title">Upload</h2>
+            <div class="file-upload">
+              <input type="file" id="gpxFile" accept=".gpx" />
+              <label for="gpxFile" class="upload-btn">Choose GPX File</label>
+            </div>
+          </section>
+
+          <!-- Avatar Upload Section -->
+          <section class="section">
+            <h2 class="section-title">Avatar Images</h2>
+            <div class="avatar-upload">
+              <input type="file" id="avatarFiles" accept="image/*" multiple />
+              <label for="avatarFiles" class="upload-btn avatar-btn">Upload Avatars</label>
+              <div class="avatar-info">
+                <small>Upload images to use as moving pins (PNG, JPG, GIF)</small>
+              </div>
+              <div id="avatarGallery" class="avatar-gallery">
+                <!-- Uploaded avatars will be displayed here -->
+              </div>
+              <div id="convoyInfo" class="convoy-info" style="display: none">
+                <small>All uploaded avatars will move together as rounded pins with the main pin</small>
+              </div>
+            </div>
+          </section>
+
+          <!-- Playback Controls Section -->
+          <section class="section" id="playbackSection" style="display: none">
+            <h2 class="section-title">Playback</h2>
+            <div class="playback-controls" id="playbackControls">
+              <div class="control-buttons">
+                <button id="playBtn" class="control-btn">▶ Play</button>
+                <button id="pauseBtn" class="control-btn">⏸ Pause</button>
+                <button id="resetBtn" class="control-btn">↻ Reset</button>
+              </div>
+              <div class="speed-control">
+                <label for="speedSlider">Speed:</label>
+                <input
+                  type="range"
+                  id="speedSlider"
+                  min="1"
+                  max="10"
+                  value="5"
+                  step="1"
+                />
+                <span id="speedValue">5x</span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar">
+                  <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <span id="progressText">0%</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Track Information Section -->
+          <section class="section">
+            <div id="trackInfo" class="track-info" style="display: none">
+              <h2 class="section-title">Track Information</h2>
+              <div class="info-grid">
+                <div>
+                  <strong>Total Points:</strong> <span id="totalPoints">-</span>
+                </div>
+                <div>
+                  <strong>Distance:</strong> <span id="totalDistance">-</span>
+                </div>
+                <div>
+                  <strong>Duration:</strong> <span id="totalDuration">-</span>
+                </div>
+                <div>
+                  <strong>Current Point:</strong> <span id="currentPoint">-</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Cross Street Lines Section -->
+          <section class="section" id="crossStreetSection" style="display: none">
+            <h2 class="section-title">Cross Street Lines</h2>
+            <div class="cross-street-controls">
+              <button id="toggleDrawBtn" class="control-btn draw-btn">📏 Draw Line</button>
+              <div id="drawingInstructions" class="drawing-instructions" style="display: none">
+                <p>Click two points on the map to create a line</p>
+                <button id="cancelDrawBtn" class="control-btn cancel-btn">✕ Cancel</button>
+              </div>
+              <div id="crossStreetList" class="cross-street-list">
+                <!-- Cross street lines will be listed here -->
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div id="map" class="map-container"></div>
+      </div>
+    </div>
+
+    <!-- Lucky Draw Page -->
+    <div id="lucky-draw" class="page">
+      <div class="lucky-draw-container">
+        <div class="lucky-draw-sidebar">
+          <header>
+            <h1>🎲 Lucky Draw</h1>
+          </header>
+
+          <!-- Name Input Section -->
+          <section class="section">
+            <h2 class="section-title">Add Names</h2>
+            <div class="name-input-section">
+              <div class="input-group">
+                <input type="text" id="nameInput" placeholder="Enter a name..." maxlength="30" />
+                <button id="addNameBtn" class="control-btn">Add Name</button>
+              </div>
+              <div class="bulk-input">
+                <textarea id="bulkNameInput" placeholder="Or paste multiple names (one per line)..." rows="4"></textarea>
+                <button id="addBulkNamesBtn" class="control-btn">Add All Names</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Names List Section -->
+          <section class="section">
+            <h2 class="section-title">Participants (<span id="nameCount">0</span>)</h2>
+            <div class="names-controls">
+              <button id="clearAllBtn" class="control-btn clear-btn">Clear All</button>
+              <button id="shuffleBtn" class="control-btn">Shuffle List</button>
+            </div>
+            <div id="namesList" class="names-list">
+              <p class="empty-message">No names added yet. Add some names to start the lucky draw!</p>
+            </div>
+          </section>
+
+          <!-- Draw Controls Section -->
+          <section class="section">
+            <h2 class="section-title">Lucky Draw</h2>
+            <div class="draw-controls">
+              <button id="startDrawBtn" class="draw-btn" disabled>🎲 Start Lucky Draw</button>
+              <div class="draw-options">
+                <label>
+                  <input type="checkbox" id="removeWinnerOption" checked />
+                  Remove winner from list
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <!-- Winner History Section -->
+          <section class="section">
+            <h2 class="section-title">Winners History</h2>
+            <div class="winner-controls">
+              <button id="clearHistoryBtn" class="control-btn clear-btn">Clear History</button>
+            </div>
+            <div id="winnerHistory" class="winner-history">
+              <p class="empty-message">No winners yet!</p>
+            </div>
+          </section>
+        </div>
+
+        <div class="lucky-draw-display">
+          <div class="draw-wheel">
+            <div id="drawWheel" class="wheel-container">
+              <div class="wheel-center">
+                <div id="wheelContent" class="wheel-content">
+                  <div class="wheel-text">Add names and click "Start Lucky Draw"</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Winner Display -->
+            <div id="winnerDisplay" class="winner-display" style="display: none;">
+              <div class="winner-content">
+                <h2>🎉 Winner! 🎉</h2>
+                <div id="winnerName" class="winner-name"></div>
+                <button id="drawAgainBtn" class="draw-btn">Draw Again</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Page switching functionality
+      function switchPage(pageId) {
+        // Hide all pages
+        document.querySelectorAll('.page').forEach(page => {
+          page.classList.remove('active');
+        });
+        
+        // Remove active class from all nav buttons
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        
+        // Show selected page
+        document.getElementById(pageId).classList.add('active');
+        
+        // Add active class to corresponding nav button
+        if (pageId === 'gpx-viewer') {
+          document.getElementById('gpxViewerNav').classList.add('active');
+        } else if (pageId === 'lucky-draw') {
+          document.getElementById('luckyDrawNav').classList.add('active');
+        }
+      }
+
+      // Lucky Draw functionality
+      let participantNames = [];
+      let winnerHistory = [];
+      let isDrawing = false;
+
+      // Initialize the application when the page loads
+      document.addEventListener("DOMContentLoaded", function () {
+        initializeApp();
+        initializeLuckyDraw();
+      });
+
+      function initializeLuckyDraw() {
+        // Add event listeners for lucky draw
+        document.getElementById('addNameBtn').addEventListener('click', addSingleName);
+        document.getElementById('addBulkNamesBtn').addEventListener('click', addBulkNames);
+        document.getElementById('nameInput').addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            addSingleName();
+          }
+        });
+        document.getElementById('clearAllBtn').addEventListener('click', clearAllNames);
+        document.getElementById('shuffleBtn').addEventListener('click', shuffleNames);
+        document.getElementById('startDrawBtn').addEventListener('click', startLuckyDraw);
+        document.getElementById('drawAgainBtn').addEventListener('click', drawAgain);
+        document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
+      }
+
+      function addSingleName() {
+        const nameInput = document.getElementById('nameInput');
+        const name = nameInput.value.trim();
+        
+        if (name && !participantNames.includes(name)) {
+          participantNames.push(name);
+          nameInput.value = '';
+          updateNamesList();
+          updateDrawButton();
+        } else if (participantNames.includes(name)) {
+          alert('This name is already in the list!');
+        }
+      }
+
+      function addBulkNames() {
+        const bulkInput = document.getElementById('bulkNameInput');
+        const names = bulkInput.value.split('\n')
+          .map(name => name.trim())
+          .filter(name => name && !participantNames.includes(name));
+        
+        participantNames.push(...names);
+        bulkInput.value = '';
+        updateNamesList();
+        updateDrawButton();
+      }
+
+      function updateNamesList() {
+        const namesList = document.getElementById('namesList');
+        const nameCount = document.getElementById('nameCount');
+        
+        nameCount.textContent = participantNames.length;
+        
+        if (participantNames.length === 0) {
+          namesList.innerHTML = '<p class="empty-message">No names added yet. Add some names to start the lucky draw!</p>';
+          return;
+        }
+
+        namesList.innerHTML = participantNames.map((name, index) => `
+          <div class="name-item">
+            <span class="name-text">${name}</span>
+            <button class="delete-name-btn" onclick="removeName(${index})">✕</button>
+          </div>
+        `).join('');
+      }
+
+      function removeName(index) {
+        participantNames.splice(index, 1);
+        updateNamesList();
+        updateDrawButton();
+      }
+
+      function clearAllNames() {
+        if (participantNames.length > 0 && confirm('Are you sure you want to clear all names?')) {
+          participantNames = [];
+          updateNamesList();
+          updateDrawButton();
+        }
+      }
+
+      function shuffleNames() {
+        for (let i = participantNames.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [participantNames[i], participantNames[j]] = [participantNames[j], participantNames[i]];
+        }
+        updateNamesList();
+      }
+
+      function updateDrawButton() {
+        const startBtn = document.getElementById('startDrawBtn');
+        startBtn.disabled = participantNames.length === 0 || isDrawing;
+      }
+
+      function startLuckyDraw() {
+        if (participantNames.length === 0 || isDrawing) return;
+        
+        isDrawing = true;
+        updateDrawButton();
+        
+        // Hide winner display
+        document.getElementById('winnerDisplay').style.display = 'none';
+        
+        // Start wheel animation
+        animateWheel();
+      }
+
+      function animateWheel() {
+        const wheelContent = document.getElementById('wheelContent');
+        const wheelContainer = document.getElementById('drawWheel');
+        
+        // Add spinning animation
+        wheelContainer.classList.add('spinning');
+        
+        let animationFrame = 0;
+        const maxFrames = 60; // 3 seconds at 20fps
+        const interval = setInterval(() => {
+          // Cycle through random names during animation
+          const randomName = participantNames[Math.floor(Math.random() * participantNames.length)];
+          wheelContent.innerHTML = `<div class="wheel-text spinning-text">${randomName}</div>`;
+          
+          animationFrame++;
+          
+          if (animationFrame >= maxFrames) {
+            clearInterval(interval);
+            selectWinner();
+          }
+        }, 50);
+      }
+
+      function selectWinner() {
+        const wheelContainer = document.getElementById('drawWheel');
+        const winnerDisplay = document.getElementById('winnerDisplay');
+        const winnerName = document.getElementById('winnerName');
+        
+        // Stop spinning animation
+        wheelContainer.classList.remove('spinning');
+        
+        // Select random winner
+        const winnerIndex = Math.floor(Math.random() * participantNames.length);
+        const winner = participantNames[winnerIndex];
+        
+        // Show winner with celebration animation
+        winnerName.textContent = winner;
+        winnerDisplay.style.display = 'block';
+        winnerDisplay.classList.add('winner-celebration');
+        
+        // Add to history
+        winnerHistory.unshift({
+          name: winner,
+          timestamp: new Date().toLocaleString()
+        });
+        updateWinnerHistory();
+        
+        // Remove winner if option is checked
+        if (document.getElementById('removeWinnerOption').checked) {
+          participantNames.splice(winnerIndex, 1);
+          updateNamesList();
+        }
+        
+        isDrawing = false;
+        updateDrawButton();
+        
+        // Remove celebration animation after delay
+        setTimeout(() => {
+          winnerDisplay.classList.remove('winner-celebration');
+        }, 2000);
+      }
+
+      function drawAgain() {
+        document.getElementById('winnerDisplay').style.display = 'none';
+        const wheelContent = document.getElementById('wheelContent');
+        wheelContent.innerHTML = '<div class="wheel-text">Click "Start Lucky Draw" to begin</div>';
+      }
+
+      function updateWinnerHistory() {
+        const historyContainer = document.getElementById('winnerHistory');
+        
+        if (winnerHistory.length === 0) {
+          historyContainer.innerHTML = '<p class="empty-message">No winners yet!</p>';
+          return;
+        }
+
+        historyContainer.innerHTML = winnerHistory.map((winner, index) => `
+          <div class="winner-item">
+            <div class="winner-info">
+              <strong>${winner.name}</strong>
+              <small>${winner.timestamp}</small>
+            </div>
+            <button class="delete-winner-btn" onclick="removeWinner(${index})">✕</button>
+          </div>
+        `).join('');
+      }
+
+      function removeWinner(index) {
+        winnerHistory.splice(index, 1);
+        updateWinnerHistory();
+      }
+
+      function clearHistory() {
+        if (winnerHistory.length > 0 && confirm('Are you sure you want to clear the winner history?')) {
+          winnerHistory = [];
+          updateWinnerHistory();
+        }
+      }
+
+      // Load Google Maps API
+      function initializeApp() {
+        const script = document.createElement("script");
+        script.src =
+          "https://maps.googleapis.com/maps/api/js?key=AIzaSyA4dgpQZBaVw0DMJHt-pSXstlRqVe-GSOY&callback=initMap&libraries=geometry";
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+
+      // Global variables
+      let map;
+      let gpxData = null;
+      let trackPolyline = null;
+      let progressivePolyline = null; // Progressive polyline for animation
+      let directionMarkers = [];
+      let progressiveArrows = []; // Progressive arrows for animation
+      let currentMarker = null;
+      let animationInterval = null;
+      let currentPointIndex = 0;
+      let isPlaying = false;
+      let progressiveDots = []; // Array to store progressive dots during animation
+      let isAnimationMode = false; // Track if we're in animation mode
+
+      // Cross street line variables
+      let crossStreetLines = []; // Array to store all cross street lines
+      let isDrawingMode = false; // Track if we're in drawing mode
+      let drawingPoints = []; // Array to store points while drawing
+      let tempMarkers = []; // Temporary markers while drawing
+
+      // Avatar variables
+      let avatarImages = []; // Array to store uploaded avatar images
+      let avatarSize = 40; // Size of avatar images in pixels
+
+      // Convoy variables for multiple moving pins
+      let convoyMarkers = []; // Array to store all moving markers (default pin + avatars)
+
+      // GPX Parser
+      function parseGPX(gpxText) {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(gpxText, "text/xml");
+
+        // Check for parsing errors
+        if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
+          throw new Error("Invalid GPX file format");
+        }
+
+        let trackPoints = [];
+        const trkpts = xmlDoc.getElementsByTagName("trkpt");
+
+        if (trkpts.length === 0) {
+          throw new Error("No track points found in GPX file");
+        }
+
+        for (let i = 0; i < trkpts.length; i++) {
+          const trkpt = trkpts[i];
+          const lat = parseFloat(trkpt.getAttribute("lat"));
+          const lon = parseFloat(trkpt.getAttribute("lon"));
+
+          const timeElement = trkpt.getElementsByTagName("time")[0];
+          const time = timeElement ? new Date(timeElement.textContent) : null;
+
+          const eleElement = trkpt.getElementsByTagName("ele")[0];
+          const elevation = eleElement
+            ? parseFloat(eleElement.textContent)
+            : null;
+
+          trackPoints.push({
+            lat: lat,
+            lon: lon,
+            time: time,
+            elevation: elevation,
+          });
+        }
+
+        // Downsample track points if there are more than 200 points
+        if (trackPoints.length > 200) {
+          trackPoints = downsampleTrackPoints(trackPoints, 200);
+        }
+
+        // Calculate total distance and duration
+        let totalDistance = 0;
+        let totalDuration = 0;
+
+        for (let i = 1; i < trackPoints.length; i++) {
+          const distance = calculateDistance(
+            trackPoints[i - 1].lat,
+            trackPoints[i - 1].lon,
+            trackPoints[i].lat,
+            trackPoints[i].lon
+          );
+          totalDistance += distance;
+
+          if (trackPoints[i].time && trackPoints[i - 1].time) {
+            totalDuration =
+              (trackPoints[trackPoints.length - 1].time - trackPoints[0].time) /
+              1000;
+          }
+        }
+
+        return {
+          trackPoints: trackPoints,
+          totalDistance: totalDistance,
+          totalDuration: totalDuration,
+        };
+      }
+
+      function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Earth's radius in kilometers
+        const dLat = ((lat2 - lat1) * Math.PI) / 180;
+        const dLon = ((lon2 - lon1) * Math.PI) / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos((lat1 * Math.PI) / 180) *
+            Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      }
+
+      function downsampleTrackPoints(trackPoints, maxPoints) {
+        if (trackPoints.length <= maxPoints) {
+          return trackPoints;
+        }
+
+        const downsampledPoints = [];
+        const step = (trackPoints.length - 1) / (maxPoints - 1);
+
+        // Always include the first point
+        downsampledPoints.push(trackPoints[0]);
+
+        // Select evenly spaced points
+        for (let i = 1; i < maxPoints - 1; i++) {
+          const index = Math.round(i * step);
+          downsampledPoints.push(trackPoints[index]);
+        }
+
+        // Always include the last point
+        downsampledPoints.push(trackPoints[trackPoints.length - 1]);
+
+        return downsampledPoints;
+      }
+
+      function initMap() {
+        // Initialize Google Map
+        map = new google.maps.Map(document.getElementById("map"), {
+          zoom: 13,
+          center: { lat: 37.7749, lng: -122.4194 }, // Default to San Francisco
+          mapTypeId: "terrain",
+        });
+
+        // Set up file upload handler
+        document
+          .getElementById("gpxFile")
+          .addEventListener("change", handleFileUpload);
+
+        // Set up playback controls
+        document
+          .getElementById("playBtn")
+          .addEventListener("click", startAnimation);
+        document
+          .getElementById("pauseBtn")
+          .addEventListener("click", pauseAnimation);
+        document
+          .getElementById("resetBtn")
+          .addEventListener("click", resetAnimation);
+        document
+          .getElementById("speedSlider")
+          .addEventListener("input", updateSpeed);
+
+        // Set up cross street line controls
+        document
+          .getElementById("toggleDrawBtn")
+          .addEventListener("click", toggleDrawingMode);
+        document
+          .getElementById("cancelDrawBtn")
+          .addEventListener("click", cancelDrawing);
+
+        // Set up avatar controls
+        document
+          .getElementById("avatarFiles")
+          .addEventListener("change", handleAvatarUpload);
+
+        // Set up map click listener for drawing lines
+        map.addListener("click", handleMapClick);
+      }
+
+      function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (file && file.name.endsWith(".gpx")) {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            try {
+              gpxData = parseGPX(e.target.result);
+              displayTrack();
+              showTrackInfo();
+              document.getElementById("playbackSection").style.display = "block";
+              document.getElementById("crossStreetSection").style.display = "block";
+            } catch (error) {
+              alert("Error parsing GPX file: " + error.message);
+            }
+          };
+          reader.readAsText(file);
+        } else {
+          alert("Please select a valid GPX file.");
+        }
+      }
+
+      function displayTrack() {
+        if (!gpxData || !gpxData.trackPoints.length) return;
+
+        // Clear previous track
+        clearTrack();
+
+        // Create polyline for the track
+        const path = gpxData.trackPoints.map((point) => ({
+          lat: point.lat,
+          lng: point.lon,
+        }));
+
+        trackPolyline = new google.maps.Polyline({
+          path: path,
+          geodesic: true,
+          strokeColor: "#FF6B35",
+          strokeOpacity: 1.0,
+          strokeWeight: 3,
+        });
+
+        trackPolyline.setMap(map);
+
+        // Add direction arrows
+        addDirectionArrows();
+
+        // Fit map to track bounds
+        const bounds = new google.maps.LatLngBounds();
+        path.forEach((point) => bounds.extend(point));
+        map.fitBounds(bounds);
+
+        // Add start and end markers
+        addStartEndMarkers();
+      }
+
+      function addDirectionArrows() {
+        const points = gpxData.trackPoints;
+        const arrowInterval = Math.max(1, Math.floor(points.length / 20)); // Show ~20 arrows max
+
+        for (let i = 0; i < points.length - 1; i += arrowInterval) {
+          const start = new google.maps.LatLng(points[i].lat, points[i].lon);
+          const end = new google.maps.LatLng(
+            points[i + 1].lat,
+            points[i + 1].lon
+          );
+
+          const heading = google.maps.geometry.spherical.computeHeading(
+            start,
+            end
+          );
+
+          const arrowMarker = new google.maps.Marker({
+            position: start,
+            map: map,
+            icon: {
+              path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+              scale: 3,
+              fillColor: "#FF6B35",
+              fillOpacity: 0.8,
+              strokeColor: "#FFFFFF",
+              strokeWeight: 1,
+              rotation: heading,
+            },
+            title: "Point " + (i + 1),
+          });
+
+          directionMarkers.push(arrowMarker);
+        }
+      }
+
+      function addStartEndMarkers() {
+        const points = gpxData.trackPoints;
+        if (points.length === 0) return;
+
+        // Start marker
+        new google.maps.Marker({
+          position: { lat: points[0].lat, lng: points[0].lon },
+          map: map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#FF6B35",
+            fillOpacity: 1,
+            strokeColor: "#FFFFFF",
+            strokeWeight: 2,
+          },
+          title: "Start",
+        });
+
+        // End marker
+        const lastPoint = points[points.length - 1];
+        new google.maps.Marker({
+          position: { lat: lastPoint.lat, lng: lastPoint.lon },
+          map: map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#CC5500",
+            fillOpacity: 1,
+            strokeColor: "#FFFFFF",
+            strokeWeight: 2,
+          },
+          title: "End",
+        });
+      }
+
+      function clearTrack() {
+        if (trackPolyline) {
+          trackPolyline.setMap(null);
+          trackPolyline = null;
+        }
+
+        directionMarkers.forEach((marker) => marker.setMap(null));
+        directionMarkers = [];
+
+        // Clear progressive dots
+        progressiveDots.forEach((marker) => marker.setMap(null));
+        progressiveDots = [];
+
+        if (currentMarker) {
+          currentMarker.setMap(null);
+          currentMarker = null;
+        }
+
+        // Clear convoy markers
+        convoyMarkers.forEach((marker) => marker.setMap(null));
+        convoyMarkers = [];
+
+        // Clear cross street lines
+        clearAllCrossStreetLines();
+
+        // Clear avatars when loading new track
+        clearAllAvatars();
+      }
+
+      function showTrackInfo() {
+        if (!gpxData) return;
+
+        document.getElementById("totalPoints").textContent =
+          gpxData.trackPoints.length;
+        document.getElementById("totalDistance").textContent =
+          gpxData.totalDistance.toFixed(2) + " km";
+        document.getElementById("totalDuration").textContent = formatDuration(
+          gpxData.totalDuration
+        );
+        document.getElementById("trackInfo").style.display = "block";
+      }
+
+      function startAnimation() {
+        if (!gpxData || isPlaying) return;
+
+        isPlaying = true;
+        isAnimationMode = true;
+        
+        // Clear the static track and show only start marker
+        clearStaticTrack();
+        addStartMarker();
+        
+        // Initialize convoy for smooth animation
+        initializeConvoy();
+        
+        // Set initial zoom level for smooth tracking
+        map.setZoom(18);
+        
+        const speed = parseInt(document.getElementById("speedSlider").value);
+        const interval = Math.max(30, 300 / speed); // Minimum 30ms interval for smoother animation
+
+        animationInterval = setInterval(() => {
+          if (currentPointIndex >= gpxData.trackPoints.length) {
+            pauseAnimation();
+            addEndMarker(); // Add end marker when animation completes
+            return;
+          }
+
+          showCurrentPoint();
+          updateProgressiveTrack();
+          currentPointIndex++;
+          updateProgress();
+        }, interval);
+      }
+
+      function pauseAnimation() {
+        isPlaying = false;
+        if (animationInterval) {
+          clearInterval(animationInterval);
+          animationInterval = null;
+        }
+        
+        // If animation completes, exit animation mode and show full track
+        if (currentPointIndex >= gpxData.trackPoints.length) {
+          isAnimationMode = false;
+          // Keep the progressive track visible after completion
+        }
+      }
+
+      function resetAnimation() {
+        pauseAnimation();
+        currentPointIndex = 0;
+        isAnimationMode = false;
+        
+        // Clear progressive elements
+        progressiveDots.forEach((marker) => marker.setMap(null));
+        progressiveDots = [];
+        
+        progressiveArrows.forEach((marker) => marker.setMap(null));
+        progressiveArrows = [];
+
+        if (currentMarker) {
+          currentMarker.setMap(null);
+          currentMarker = null;
+        }
+        
+        if (progressivePolyline) {
+          progressivePolyline.setMap(null);
+          progressivePolyline = null;
+        }
+        
+        // Restore full track view
+        displayTrack();
+        updateProgress();
+      }
+
+      function showCurrentPoint() {
+        if (!gpxData || currentPointIndex >= gpxData.trackPoints.length) return;
+
+        const point = gpxData.trackPoints[currentPointIndex];
+
+        // Add a progressive dot at the current point
+        const progressiveDot = new google.maps.Marker({
+          position: { lat: point.lat, lng: point.lon },
+          map: map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 4,
+            fillColor: "#F7931E", // Orange color for progressive dots
+            fillOpacity: 0.8,
+            strokeColor: "#CC5500", // Dark orange border
+            strokeWeight: 1,
+          },
+          title: "Track Point " + (currentPointIndex + 1),
+        });
+
+        // Store the dot in our progressive dots array
+        progressiveDots.push(progressiveDot);
+
+        // Clear legacy current marker if it exists
+        if (currentMarker) {
+          currentMarker.setMap(null);
+          currentMarker = null;
+        }
+
+        // Initialize convoy if not already created or if avatar count changed
+        if (convoyMarkers.length !== (1 + avatarImages.length)) {
+          initializeConvoy();
+        }
+
+        // Update convoy positions smoothly
+        updateConvoyPositions(point);
+
+        // Smoothly pan the map to follow the moving pin
+        map.panTo({ lat: point.lat, lng: point.lon });
+      }
+
+      function initializeConvoy() {
+        // Clear existing convoy markers
+        convoyMarkers.forEach((marker) => marker.setMap(null));
+        convoyMarkers = [];
+
+        // Create main default pin (always first in convoy)
+        const mainMarker = new google.maps.Marker({
+          position: { lat: 0, lng: 0 }, // Will be updated by updateConvoyPositions
+          map: map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#FFB366",
+            fillOpacity: 1,
+            strokeColor: "#FFFFFF",
+            strokeWeight: 3,
+          },
+          title: "Main Position",
+          zIndex: 1000,
+        });
+        convoyMarkers.push(mainMarker);
+
+        // Create avatar markers following in formation
+        avatarImages.forEach((avatar, index) => {
+          const avatarMarker = new google.maps.Marker({
+            position: { lat: 0, lng: 0 }, // Will be updated by updateConvoyPositions
+            map: map,
+            icon: {
+              url: avatar.circularUrl, // Use circular version for map pins
+              scaledSize: new google.maps.Size(avatarSize, avatarSize),
+              anchor: new google.maps.Point(avatarSize / 2, avatarSize / 2),
+            },
+            title: avatar.name,
+            zIndex: 999 - index,
+          });
+          convoyMarkers.push(avatarMarker);
+        });
+      }
+
+      function updateConvoyPositions(point) {
+        if (convoyMarkers.length === 0) return;
+
+        // Calculate formation parameters
+        const baseOffsetDistance = 0.0008;
+        const offsetDistance = baseOffsetDistance + (avatarImages.length * 0.0002);
+
+        // Update main pin position
+        if (convoyMarkers[0]) {
+          convoyMarkers[0].setPosition({ lat: point.lat, lng: point.lon });
+          convoyMarkers[0].setTitle("Main Position - Point " + (currentPointIndex + 1));
+        }
+
+        // Update avatar positions
+        avatarImages.forEach((avatar, index) => {
+          if (convoyMarkers[index + 1]) {
+            // Calculate ring and position within ring for better spacing
+            const avatarsPerRing = 6;
+            const ring = Math.floor(index / avatarsPerRing);
+            const positionInRing = index % avatarsPerRing;
+            const avatarsInCurrentRing = Math.min(avatarsPerRing, avatarImages.length - ring * avatarsPerRing);
+            
+            // Calculate angle for this position in the ring
+            const angle = (positionInRing * (360 / avatarsInCurrentRing)) * (Math.PI / 180);
+            
+            // Calculate distance based on ring
+            const ringDistance = offsetDistance * (1 + ring * 0.8);
+            
+            // Calculate final position
+            const offsetLat = point.lat + (ringDistance * Math.cos(angle));
+            const offsetLng = point.lon + (ringDistance * Math.sin(angle));
+
+            // Smoothly update position
+            convoyMarkers[index + 1].setPosition({ lat: offsetLat, lng: offsetLng });
+            convoyMarkers[index + 1].setTitle(`${avatar.name} - Point ${currentPointIndex + 1}`);
+          }
+        });
+      }
+
+      function clearStaticTrack() {
+        if (trackPolyline) {
+          trackPolyline.setMap(null);
+          trackPolyline = null;
+        }
+        
+        directionMarkers.forEach((marker) => marker.setMap(null));
+        directionMarkers = [];
+      }
+
+      function addStartMarker() {
+        const points = gpxData.trackPoints;
+        if (points.length === 0) return;
+
+        new google.maps.Marker({
+          position: { lat: points[0].lat, lng: points[0].lon },
+          map: map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#FF6B35",
+            fillOpacity: 1,
+            strokeColor: "#FFFFFF",
+            strokeWeight: 2,
+          },
+          title: "Start",
+        });
+      }
+
+      function addEndMarker() {
+        const points = gpxData.trackPoints;
+        if (points.length === 0) return;
+
+        const lastPoint = points[points.length - 1];
+        new google.maps.Marker({
+          position: { lat: lastPoint.lat, lng: lastPoint.lon },
+          map: map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#CC5500",
+            fillOpacity: 1,
+            strokeColor: "#FFFFFF",
+            strokeWeight: 2,
+          },
+          title: "End",
+        });
+      }
+
+      function updateProgressiveTrack() {
+        if (!gpxData || currentPointIndex <= 0) return;
+        
+        // Update progressive polyline
+        const progressivePath = gpxData.trackPoints.slice(0, currentPointIndex + 1).map((point) => ({
+          lat: point.lat,
+          lng: point.lon,
+        }));
+
+        if (progressivePolyline) {
+          progressivePolyline.setMap(null);
+        }
+
+        progressivePolyline = new google.maps.Polyline({
+          path: progressivePath,
+          geodesic: true,
+          strokeColor: "#FF6B35",
+          strokeOpacity: 1.0,
+          strokeWeight: 3,
+        });
+
+        progressivePolyline.setMap(map);
+
+        // Add direction arrow every 10 points to avoid too many arrows
+        if (currentPointIndex > 0 && currentPointIndex % 10 === 0) {
+          const points = gpxData.trackPoints;
+          const start = new google.maps.LatLng(points[currentPointIndex - 1].lat, points[currentPointIndex - 1].lon);
+          const end = new google.maps.LatLng(points[currentPointIndex].lat, points[currentPointIndex].lon);
+
+          const heading = google.maps.geometry.spherical.computeHeading(start, end);
+
+          const arrowMarker = new google.maps.Marker({
+            position: start,
+            map: map,
+            icon: {
+              path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+              scale: 3,
+              fillColor: "#FF6B35",
+              fillOpacity: 0.8,
+              strokeColor: "#FFFFFF",
+              strokeWeight: 1,
+              rotation: heading,
+            },
+            title: "Point " + currentPointIndex,
+          });
+
+          progressiveArrows.push(arrowMarker);
+        }
+      }
+
+      function updateProgress() {
+        if (!gpxData) return;
+
+        const progress = (currentPointIndex / gpxData.trackPoints.length) * 100;
+        document.getElementById("progressFill").style.width = progress + "%";
+        document.getElementById("progressText").textContent =
+          Math.round(progress) + "%";
+        document.getElementById("currentPoint").textContent =
+          currentPointIndex + 1 + " / " + gpxData.trackPoints.length;
+      }
+
+      function updateSpeed() {
+        const speed = document.getElementById("speedSlider").value;
+        document.getElementById("speedValue").textContent = speed + "x";
+
+        if (isPlaying) {
+          pauseAnimation();
+          startAnimation();
+        }
+      }
+
+      function formatDuration(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+
+        if (hours > 0) {
+          return hours + "h " + minutes + "m " + secs + "s";
+        } else {
+          return minutes + "m " + secs + "s";
+        }
+      }
+
+      // Cross Street Line Functions
+      function toggleDrawingMode() {
+        isDrawingMode = !isDrawingMode;
+        
+        if (isDrawingMode) {
+          document.getElementById("toggleDrawBtn").textContent = "📏 Drawing...";
+          document.getElementById("toggleDrawBtn").style.backgroundColor = "#FF6B35";
+          document.getElementById("toggleDrawBtn").style.color = "white";
+          document.getElementById("drawingInstructions").style.display = "block";
+          map.setOptions({ draggable: false }); // Disable map dragging while drawing
+        } else {
+          exitDrawingMode();
+        }
+      }
+
+      function exitDrawingMode() {
+        isDrawingMode = false;
+        document.getElementById("toggleDrawBtn").textContent = "📏 Draw Line";
+        document.getElementById("toggleDrawBtn").style.backgroundColor = "";
+        document.getElementById("toggleDrawBtn").style.color = "";
+        document.getElementById("drawingInstructions").style.display = "none";
+        map.setOptions({ draggable: true }); // Re-enable map dragging
+        
+        // Clear any temporary drawing state
+        clearTempMarkers();
+        drawingPoints = [];
+      }
+
+      function cancelDrawing() {
+        exitDrawingMode();
+      }
+
+      function handleMapClick(event) {
+        if (!isDrawingMode) return;
+
+        const clickedPoint = {
+          lat: event.latLng.lat(),
+          lng: event.latLng.lng()
+        };
+
+        drawingPoints.push(clickedPoint);
+
+        // Add a temporary marker
+        const tempMarker = new google.maps.Marker({
+          position: clickedPoint,
+          map: map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 6,
+            fillColor: "#FF6B35",
+            fillOpacity: 1,
+            strokeColor: "#FFFFFF",
+            strokeWeight: 2,
+          },
+          title: "Line Point " + drawingPoints.length,
+        });
+
+        tempMarkers.push(tempMarker);
+
+        // If we have two points, create the line
+        if (drawingPoints.length === 2) {
+          createCrossStreetLine(drawingPoints[0], drawingPoints[1]);
+          exitDrawingMode();
+        }
+      }
+
+      function createCrossStreetLine(point1, point2) {
+        const lineId = Date.now(); // Simple unique ID
+        
+        const crossStreetLine = new google.maps.Polyline({
+          path: [point1, point2],
+          geodesic: true,
+          strokeColor: "#9C27B0", // Purple color for cross street lines
+          strokeOpacity: 1.0,
+          strokeWeight: 3,
+          strokeStyle: 'solid'
+        });
+
+        crossStreetLine.setMap(map);
+
+        // Add start and end markers for the line
+        const startMarker = new google.maps.Marker({
+          position: point1,
+          map: map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 5,
+            fillColor: "#9C27B0",
+            fillOpacity: 1,
+            strokeColor: "#FFFFFF",
+            strokeWeight: 2,
+          },
+          title: "Cross Street Start",
+        });
+
+        const endMarker = new google.maps.Marker({
+          position: point2,
+          map: map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 5,
+            fillColor: "#9C27B0",
+            fillOpacity: 1,
+            strokeColor: "#FFFFFF",
+            strokeWeight: 2,
+          },
+          title: "Cross Street End",
+        });
+
+        // Calculate distance
+        const distance = calculateDistance(point1.lat, point1.lng, point2.lat, point2.lng);
+
+        // Store the line data
+        const lineData = {
+          id: lineId,
+          polyline: crossStreetLine,
+          startMarker: startMarker,
+          endMarker: endMarker,
+          point1: point1,
+          point2: point2,
+          distance: distance
+        };
+
+        crossStreetLines.push(lineData);
+        updateCrossStreetList();
+      }
+
+      function updateCrossStreetList() {
+        const listContainer = document.getElementById("crossStreetList");
+        listContainer.innerHTML = "";
+
+        if (crossStreetLines.length === 0) {
+          listContainer.innerHTML = "<p style='color: #666; font-size: 12px; margin: 8px 0;'>No cross street lines created</p>";
+          return;
+        }
+
+        crossStreetLines.forEach((lineData, index) => {
+          const lineItem = document.createElement("div");
+          lineItem.className = "cross-street-item";
+          lineItem.innerHTML = `
+            <div class="line-info">
+              <strong>Line ${index + 1}</strong>
+              <span>${lineData.distance.toFixed(2)} km</span>
+            </div>
+            <button class="delete-line-btn" onclick="deleteCrossStreetLine(${lineData.id})">✕</button>
+          `;
+          listContainer.appendChild(lineItem);
+        });
+      }
+
+      function deleteCrossStreetLine(lineId) {
+        const lineIndex = crossStreetLines.findIndex(line => line.id === lineId);
+        if (lineIndex === -1) return;
+
+        const lineData = crossStreetLines[lineIndex];
+        
+        // Remove from map
+        lineData.polyline.setMap(null);
+        lineData.startMarker.setMap(null);
+        lineData.endMarker.setMap(null);
+
+        // Remove from array
+        crossStreetLines.splice(lineIndex, 1);
+        
+        // Update the list
+        updateCrossStreetList();
+      }
+
+      function clearTempMarkers() {
+        tempMarkers.forEach(marker => marker.setMap(null));
+        tempMarkers = [];
+      }
+
+      function clearAllCrossStreetLines() {
+        crossStreetLines.forEach(lineData => {
+          lineData.polyline.setMap(null);
+          lineData.startMarker.setMap(null);
+          lineData.endMarker.setMap(null);
+        });
+        crossStreetLines = [];
+        updateCrossStreetList();
+      }
+
+      // Avatar Functions
+      function handleAvatarUpload(event) {
+        const files = event.target.files;
+        if (files.length === 0) return;
+
+        Array.from(files).forEach(file => {
+          if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              // Create a circular version of the image for the map pin
+              createCircularImage(e.target.result, (circularUrl) => {
+                const avatarData = {
+                  id: Date.now() + Math.random(), // Unique ID
+                  name: file.name,
+                  url: e.target.result, // Original for gallery
+                  circularUrl: circularUrl, // Circular for map pins
+                  file: file
+                };
+                
+                avatarImages.push(avatarData);
+                updateAvatarGallery();
+                
+                // Show convoy info if we have avatars
+                if (avatarImages.length > 0) {
+                  document.getElementById("convoyInfo").style.display = "block";
+                }
+                
+                // If animation is playing, reinitialize convoy with new avatar
+                if (isPlaying) {
+                  initializeConvoy();
+                }
+              });
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+
+      function updateAvatarGallery() {
+        const gallery = document.getElementById("avatarGallery");
+        gallery.innerHTML = "";
+
+        if (avatarImages.length === 0) {
+          gallery.innerHTML = "<p style='color: #666; font-size: 12px; margin: 8px 0;'>No avatars uploaded</p>";
+          return;
+        }
+
+        avatarImages.forEach((avatar, index) => {
+          const avatarItem = document.createElement("div");
+          avatarItem.className = "avatar-item";
+          avatarItem.innerHTML = `
+            <div class="avatar-preview">
+              <img src="${avatar.url}" alt="${avatar.name}" />
+            </div>
+            <div class="avatar-name">${avatar.name}</div>
+            <button class="delete-avatar-btn" onclick="deleteAvatar(${index})">✕</button>
+          `;
+          gallery.appendChild(avatarItem);
+        });
+      }
+
+
+
+      function deleteAvatar(index) {
+        if (index < 0 || index >= avatarImages.length) return;
+        
+        avatarImages.splice(index, 1);
+        updateAvatarGallery();
+        
+        // Hide convoy info if no avatars left
+        if (avatarImages.length === 0) {
+          document.getElementById("convoyInfo").style.display = "none";
+        }
+        
+        // If animation is playing, reinitialize convoy with new avatar count
+        if (isPlaying) {
+          initializeConvoy();
+        }
+      }
+
+      function clearAllAvatars() {
+        avatarImages = [];
+        updateAvatarGallery();
+        document.getElementById("convoyInfo").style.display = "none";
+        
+        // Clear any existing convoy markers
+        convoyMarkers.forEach((marker) => marker.setMap(null));
+        convoyMarkers = [];
+      }
+
+      // Function to create circular version of image for map pins
+      function createCircularImage(imageUrl, callback) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Set canvas size to avatar size
+          const size = avatarSize;
+          canvas.width = size;
+          canvas.height = size;
+          
+          // Create circular clipping path for image
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(size / 2, size / 2, (size / 2) - 2, 0, 2 * Math.PI);
+          ctx.clip();
+          
+          // Draw image to fit the circle
+          ctx.drawImage(img, 0, 0, size, size);
+          ctx.restore();
+          
+          // Add circular border
+          ctx.beginPath();
+          ctx.arc(size / 2, size / 2, (size / 2) - 1, 0, 2 * Math.PI);
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          
+          // Add outer shadow/border
+          ctx.beginPath();
+          ctx.arc(size / 2, size / 2, (size / 2) - 0.5, 0, 2 * Math.PI);
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 1;
+          ctx.globalAlpha = 0.3;
+          ctx.stroke();
+          
+          // Convert to data URL and return
+          const circularUrl = canvas.toDataURL('image/png');
+          callback(circularUrl);
+        };
+        img.src = imageUrl;
+      }
+    </script>
+  </body>
+</html>
